@@ -1,7 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <direct.h>
+#include <direct.h>  // Necessesary to make directories
+#include <zlib.h>
 
 int main(int argc, char *argv[]) {
     // Flush the buffers
@@ -13,9 +14,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    char *command = argv[1];
-
-    if (argc == 2 && strcmp(command, "init") == 0) {
+    if (argc == 2 && strcmp(argv[1], "init") == 0) {
         // Create necessary files
 
         _mkdir(".gag");    // Yes I am on Windows SHUT UP
@@ -34,6 +33,9 @@ int main(int argc, char *argv[]) {
         fclose(head_file);
 
         printf("Initialized GAG directory\n");
+    }
+    else if (argc == 4 && strcmp(argv[1], "cat-file") == 0 && strcmp(argv[2], "-p")) {
+        char* hash = argv[3];
     }
     else {
         // Note, does not indicate what is the command

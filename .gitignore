@@ -1,2 +1,9 @@
 *.exe
 .gag/
+.cache/
+CMakeCache.txt
+CMakeFiles/
+CMakeLists.txt
+build.ninja
+cmake_install.cmake
+compile_commands.json
