@@ -38,9 +38,9 @@ int main(int argc, char *argv[]) {
 
         printf("Initialized GAG directory\n");
 
-    } else if (strcmp(argv[1], "cat-file") == 0 && strcmp(argv[2], "-p") == 0) {
+    } else if (strcmp(argv[1], "cat-file") == 0) {
         if (argc != 4 || strcmp(argv[2], "-p") != 0) {
-            perror("Wrong format for git cat-file -p <hash>\n");
+            perror("Wrong format. Expected: gag cat-file -p <hash>\n");
             return 1;
 
         } else if (strlen(argv[3]) != 40) {
@@ -62,7 +62,8 @@ int main(int argc, char *argv[]) {
         strcat_s(file_path, sizeof(file_path), dir);
         strcat_s(file_path, sizeof(file_path), "/");
         strcat_s(file_path, sizeof(file_path), file_name);
-        printf("The file_path string is: %s with size %llu\n", file_path, strlen(file_path));
+        printf("The file_path string is: %s with size %llu\n", file_path,
+               strlen(file_path));
 
         FILE *file;
         fopen_s(&file, file_path, "r");
@@ -101,7 +102,8 @@ int main(int argc, char *argv[]) {
         strm.avail_in = file_size + 1;
 
         size_t decompressed_size = 8192;
-        unsigned char *decompressed_data = (unsigned char *)malloc(decompressed_size * sizeof(char));
+        unsigned char *decompressed_data =
+            (unsigned char *)malloc(decompressed_size * sizeof(char));
 
         if (decompressed_data == NULL) {
             perror("Memory allocation error for decompressed_data\n");
@@ -120,7 +122,8 @@ int main(int argc, char *argv[]) {
 
             if (ret == Z_BUF_ERROR) {
                 decompressed_size *= 2;
-                unsigned char *new_buffer = (unsigned char*) realloc(decompressed_data, decompressed_size);
+                unsigned char *new_buffer = (unsigned char *)realloc(
+                    decompressed_data, decompressed_size);
 
                 if (new_buffer == NULL) {
                     perror("Memory reallocation error for new_buffer\n");
