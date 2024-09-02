@@ -2,12 +2,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 #include <zlib.h>
 
 int main(int argc, char *argv[]) {
     // Flush the buffers
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
+    char buf[1000];
+    _getcwd(buf, 1000);
+    printf("Current working dir: %s\n", buf);
 
     if (argc < 2) {
         perror("No command provided.\n");
@@ -66,7 +70,7 @@ int main(int argc, char *argv[]) {
                strlen(file_path));
 
         FILE *file;
-        fopen_s(&file, file_path, "r");
+        fopen_s(&file, file_path, "rb");
         if (file == NULL) {
             perror("Error opening file");
             return 1;
@@ -104,7 +108,8 @@ int main(int argc, char *argv[]) {
         strm.next_in = (unsigned char *)file_contents;
         strm.avail_in = file_size + 1;
 
-        size_t decompressed_size = 20000;
+        size_t old_size = 0;
+        size_t decompressed_size = 2048;
         unsigned char *decompressed_data =
             (unsigned char *)malloc(decompressed_size * sizeof(char));
 
@@ -116,19 +121,18 @@ int main(int argc, char *argv[]) {
 
         int ret;
         do {
-            strm.next_out = decompressed_data;
+            strm.next_out = decompressed_data + old_size;
             strm.avail_out = decompressed_size;
 
-            printf("About to inflate stream\n");
-            printf("Old avail_in = %u\n", strm.avail_in);
-            printf("Old next_in = %s\n", strm.next_in);
             ret = inflate(&strm, Z_NO_FLUSH);
-            printf("New avail_in = %u\n", strm.avail_in);
-            printf("New next_in = %s\n", strm.next_in);
             printf("Inflated stream with ret = %d\n", ret);
 
-            if (ret == Z_BUF_ERROR) {
+            if (ret == Z_BUF_ERROR || (ret == Z_OK && strm.avail_out == 0)) {
+                old_size = decompressed_size;
                 decompressed_size *= 2;
+                printf(
+                    "About to reallocate output buffer, with new size = %lld\n",
+                    decompressed_size);
                 unsigned char *new_buffer = (unsigned char *)realloc(
                     decompressed_data, decompressed_size);
 
@@ -152,8 +156,14 @@ int main(int argc, char *argv[]) {
 
         inflateEnd(&strm);
 
+        char *endptr;
+        long decompressed_file_length;
         printf("Decompressed data: %s\n", decompressed_data);
-        printf("Decompressed data: %s\n", decompressed_data + 8);
+
+        decompressed_file_length = strtol((char *) decompressed_data + 5, &endptr, 10);  // "blob".len() == 5
+        printf("Length of Decompressed File: %ld\n", decompressed_file_length);
+        assert(decompressed_file_length >= 0);
+        printf("Fully Decompressed File:\n%s", decompressed_data + strnlen((char*) decompressed_data, 5 + 1 + 10) + 1);
 
         free(file_contents);
         free(decompressed_data);
