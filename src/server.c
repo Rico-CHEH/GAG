@@ -90,6 +90,9 @@ int main(int argc, char *argv[]) {
         printf("File contents:\n%s\n", file_contents);
 
         z_stream strm;
+        strm.zalloc = Z_NULL;
+        strm.zfree = Z_NULL;
+        strm.opaque = Z_NULL;
         memset(&strm, 0, sizeof(strm));
 
         if (inflateInit(&strm) != Z_OK) {
@@ -101,7 +104,7 @@ int main(int argc, char *argv[]) {
         strm.next_in = (unsigned char *)file_contents;
         strm.avail_in = file_size + 1;
 
-        size_t decompressed_size = 8192;
+        size_t decompressed_size = 20000;
         unsigned char *decompressed_data =
             (unsigned char *)malloc(decompressed_size * sizeof(char));
 
@@ -117,7 +120,11 @@ int main(int argc, char *argv[]) {
             strm.avail_out = decompressed_size;
 
             printf("About to inflate stream\n");
+            printf("Old avail_in = %u\n", strm.avail_in);
+            printf("Old next_in = %s\n", strm.next_in);
             ret = inflate(&strm, Z_NO_FLUSH);
+            printf("New avail_in = %u\n", strm.avail_in);
+            printf("New next_in = %s\n", strm.next_in);
             printf("Inflated stream with ret = %d\n", ret);
 
             if (ret == Z_BUF_ERROR) {
