@@ -1,17 +1,51 @@
+#include <assert.h>
 #include <direct.h>  // Necessesary to make directories
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
+#include <sys/stat.h>
 #include <zlib.h>
+
+// Returns NULL if none of the parent dirs do not have .gag directory
+// Otherwise returns the full path of said parent dir
+void get_gag_dir(char working_dir[1000]) {
+    _getcwd(working_dir, 1000);
+
+    if (strstr(working_dir, ".gag") != NULL) {
+        printf("The working_dir is inside the .gag directory\n");
+        working_dir = "";
+        return;
+    }
+
+    struct stat s = {0};
+    char *ptr;
+    char gag_dir[1005 + 1] = "\0";
+    strcpy_s(gag_dir, sizeof(gag_dir), working_dir);
+    while ((ptr = strrchr(working_dir, '\\')) != NULL && strcat_s(gag_dir, sizeof(gag_dir), "\\.gag") == 0) {
+        stat(gag_dir, &s);
+
+        if (s.st_mode & S_IFDIR) {
+            printf("The working dir is %s\n", working_dir);
+            return;
+        }
+
+        *ptr = '\0';
+        gag_dir[ptr - working_dir] = '\0';
+        printf("Working dir has been updated to %s\n", working_dir);
+    }
+
+    printf("There is no working dir\n");
+    working_dir = NULL;
+    return;
+}
 
 int main(int argc, char *argv[]) {
     // Flush the buffers
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
+
     char buf[1000];
-    _getcwd(buf, 1000);
-    printf("Current working dir: %s\n", buf);
+    get_gag_dir(buf);
 
     if (argc < 2) {
         perror("No command provided.\n");
@@ -160,10 +194,13 @@ int main(int argc, char *argv[]) {
         long decompressed_file_length;
         printf("Decompressed data: %s\n", decompressed_data);
 
-        decompressed_file_length = strtol((char *) decompressed_data + 5, &endptr, 10);  // "blob".len() == 5
+        decompressed_file_length = strtol((char *)decompressed_data + 5,
+                                          &endptr, 10);  // "blob".len() == 5
         printf("Length of Decompressed File: %ld\n", decompressed_file_length);
         assert(decompressed_file_length >= 0);
-        printf("Fully Decompressed File:\n%s", decompressed_data + strnlen((char*) decompressed_data, 5 + 1 + 10) + 1);
+        printf("Fully Decompressed File:\n%s",
+               decompressed_data +
+                   strnlen((char *)decompressed_data, 5 + 1 + 10) + 1);
 
         free(file_contents);
         free(decompressed_data);
