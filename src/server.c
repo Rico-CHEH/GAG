@@ -142,10 +142,8 @@ int main(int argc, char *argv[]) {
         strm.next_in = (unsigned char *)file_contents;
         strm.avail_in = file_size + 1;
 
-        size_t old_size = 0;
-        size_t decompressed_size = 2048;
-        unsigned char *decompressed_data =
-            (unsigned char *)malloc(decompressed_size * sizeof(char));
+        size_t decompressed_size = 16;
+        unsigned char *decompressed_data = (unsigned char *)malloc(decompressed_size * sizeof(char));
 
         if (decompressed_data == NULL) {
             perror("Memory allocation error for decompressed_data\n");
@@ -153,55 +151,55 @@ int main(int argc, char *argv[]) {
             return 1;
         }
 
-        int ret;
-        do {
-            strm.next_out = decompressed_data + old_size;
-            strm.avail_out = decompressed_size;
+        strm.next_out = decompressed_data;
+        strm.avail_out = decompressed_size; 
+        int ret = inflate(&strm, Z_NO_FLUSH);
 
-            ret = inflate(&strm, Z_NO_FLUSH);
-            printf("Inflated stream with ret = %d\n", ret);
-
-            if (ret == Z_BUF_ERROR || (ret == Z_OK && strm.avail_out == 0)) {
-                old_size = decompressed_size;
-                decompressed_size *= 2;
-                printf(
-                    "About to reallocate output buffer, with new size = %lld\n",
-                    decompressed_size);
-                unsigned char *new_buffer = (unsigned char *)realloc(
-                    decompressed_data, decompressed_size);
-
-                if (new_buffer == NULL) {
-                    perror("Memory reallocation error for new_buffer\n");
-                    inflateEnd(&strm);
-                    free(file_contents);
-                    free(decompressed_data);
-                    return 1;
-                }
-
-                decompressed_data = new_buffer;
-            } else if (ret != Z_OK && ret != Z_STREAM_END) {
-                fprintf(stderr, "Decompression error: %d\n", ret);
-                inflateEnd(&strm);
-                free(file_contents);
-                free(decompressed_data);
-                return 1;
-            }
-        } while (ret != Z_STREAM_END);
-
-        inflateEnd(&strm);
+        if (ret != Z_OK && ret != Z_STREAM_END) {
+            fprintf(stderr, "Decompression error: %d\n", ret);
+            inflateEnd(&strm);
+            free(file_contents);
+            free(decompressed_data);
+            return 1;
+        }
 
         char *endptr;
-        long decompressed_file_length;
         printf("Decompressed data: %s\n", decompressed_data);
 
-        decompressed_file_length = strtol((char *)decompressed_data + 5,
-                                          &endptr, 10);  // "blob".len() == 5
-        printf("Length of Decompressed File: %ld\n", decompressed_file_length);
-        assert(decompressed_file_length >= 0);
-        printf("Fully Decompressed File:\n%s",
-               decompressed_data +
-                   strnlen((char *)decompressed_data, 5 + 1 + 10) + 1);
+        decompressed_size = strtol((char*) decompressed_data + 5, &endptr, 10);  // "blob".len() == 5
 
+        // Gets index of next character to '\0'
+        int index = (unsigned char*)endptr - decompressed_data + 1;
+        printf("Length of Decompressed File: %lld\n", decompressed_size);
+        assert(decompressed_size >= 0);
+
+        unsigned char* new_buffer = realloc(decompressed_data, (16 + decompressed_size) * sizeof(unsigned char));
+        if (new_buffer == NULL) {
+            perror("Memory reallocation error for new_buffer\n");
+            inflateEnd(&strm);
+            free(file_contents);
+            free(decompressed_data);
+            return 1;
+        }
+
+        decompressed_data = new_buffer;
+
+        strm.next_out = decompressed_data + 16;
+        strm.avail_out = decompressed_size;
+
+        ret = inflate(&strm, Z_NO_FLUSH);
+
+        if (ret != Z_OK && ret != Z_STREAM_END) {
+            fprintf(stderr, "Decompression error: %d\n", ret);
+            inflateEnd(&strm);
+            free(file_contents);
+            free(decompressed_data);
+            return 1;
+        }
+
+        printf("Fully Decompressed File:\n%s", decompressed_data + index);
+
+        inflateEnd(&strm);
         free(file_contents);
         free(decompressed_data);
 
